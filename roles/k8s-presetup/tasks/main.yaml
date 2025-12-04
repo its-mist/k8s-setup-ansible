@@ -59,14 +59,12 @@
 - name: Detect supported Ubuntu codename for Kubernetes
   ansible.builtin.set_fact:
     kubernetes_codename: >-
-      {% if ansible_distribution == 'Ubuntu' %}
-        {% if ansible_distribution_release in ['focal','jammy','lunar'] %}
-          {{ ansible_distribution_release }}
-        {% elif ansible_distribution_release | version_compare('25.04', '>=') %}
-          jammy
-        {% else %}
-          focal
-        {% endif %}
+      {% set v = ansible_distribution_version.split('.') %}
+      {% set major_minor = v[0] ~ '.' ~ v[1] %}
+      {% if ansible_distribution_release in ['focal','jammy','lunar'] %}
+        {{ ansible_distribution_release }}
+      {% elif major_minor | float >= 25.04 %}
+        jammy
       {% else %}
         focal
       {% endif %}
