@@ -1,0 +1,128 @@
+---
+# roles/k8s-presetup/tasks/main.yml
+
+- name: Disable swap
+  become: true
+  ansible.builtin.shell: |
+    swapoff -a
+    sed -i.bak '/swap/s/^/#/' /etc/fstab
+
+- name: Disable firewall (ufw)
+  become: true
+  ansible.builtin.shell: |
+    systemctl stop ufw || true
+    systemctl disable ufw || true
+
+- name: Disable selinux (for Debian/Ubuntu not used, but kept for portability)
+  become: true
+  ansible.builtin.shell: |
+    if [ -f /etc/selinux/config ]; then
+      setenforce 0 || true
+      sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+    fi
+
+- name: Load br_netfilter kernel module
+  become: true
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+
+- name: Ensure module loads on boot
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/modules-kubernetes.conf
+    content: |
+      br_netfilter
+
+- name: Configure kernel parameters
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-kubernetes.conf
+    content: |
+      net.ipv4.ip_forward=1
+      net.bridge.bridge-nf-call-iptables=1
+      net.ipv4.ip_nonlocal_bind=1
+      net.bridge.bridge-nf-call-ip6tables=1
+
+- name: Apply sysctl
+  become: true
+  ansible.builtin.command: sysctl --system
+
+# --- Kubernetes APT repo ---
+- name: Add Kubernetes APT key
+  become: true
+  ansible.builtin.apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: Add Kubernetes repo
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: |
+      deb https://apt.kubernetes.io/ kubernetes-xenial main
+
+- name: Update apt cache
+  become: true
+  ansible.builtin.apt:
+    update_cache: yes
+
+# --- Required packages ---
+- name: Install required packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - bash-completion
+      - python3
+      - tar
+      - containerd
+      - nfs-common
+      - chrony
+      - kubectl
+      - kubelet
+      - kubeadm
+    state: present
+
+- name: Install optional packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - nano
+      - git
+      - jq
+      - rsyslog
+    state: present
+
+# --- Services ---
+- name: Enable and start chronyd
+  become: true
+  ansible.builtin.service:
+    name: chrony
+    state: started
+    enabled: true
+
+- name: Enable and start rsyslog (optional)
+  become: true
+  ansible.builtin.service:
+    name: rsyslog
+    state: started
+    enabled: true
+
+- name: Enable and start containerd
+  become: true
+  ansible.builtin.service:
+    name: containerd
+    state: started
+    enabled: true
+
+- name: Configure crictl
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/crictl.yaml
+    content: |
+      runtime-endpoint: "unix:///run/containerd/containerd.sock"
+      image-endpoint: "unix:///run/containerd/containerd.sock"
+      timeout: 0
+      debug: false
+      pull-image-on-create: false
+      disable-pull-on-run: false
