@@ -49,6 +49,13 @@
   ansible.builtin.command: sysctl --system
 
 # --- Kubernetes APT repo ---
+- name: Remove CD-ROM repository to avoid apt errors
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/apt/sources.list
+    regexp: '^deb cdrom:'
+    state: absent
+
 - name: Download Kubernetes GPG key
   become: true
   ansible.builtin.get_url:
@@ -56,32 +63,13 @@
     dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
     mode: '0644'
 
-- name: Detect supported Ubuntu codename for Kubernetes
-  ansible.builtin.set_fact:
-    kubernetes_codename: >-
-      {% set v = ansible_distribution_version.split('.') %}
-      {% set major_minor = v[0] ~ '.' ~ v[1] %}
-      {% if ansible_distribution_release in ['focal','jammy','lunar'] %}
-        {{ ansible_distribution_release }}
-      {% elif major_minor | float >= 25.04 %}
-        jammy
-      {% else %}
-        focal
-      {% endif %}
 
 - name: Add Kubernetes APT repository
   become: true
   ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-{{ kubernetes_codename }} main"
+    repo: "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main"
     state: present
     filename: kubernetes
-
-- name: Add Kubernetes repo
-  become: true
-  ansible.builtin.copy:
-    dest: /etc/apt/sources.list.d/kubernetes.list
-    content: |
-      deb https://apt.kubernetes.io/ kubernetes-xenial main
 
 - name: Update apt cache
   become: true
