@@ -82,7 +82,6 @@
     signed_by: /etc/apt/keyrings/kubernetes-apt-keyring.asc
     state: present
 
-
 - name: Disable cdrom repositories
   become: true
   ansible.builtin.replace:
@@ -98,6 +97,13 @@
     replace: '# \1'
   loop: "{{ lookup('fileglob', '/etc/apt/sources.list.d/*.list', wantlist=True) }}"
   ignore_errors: true
+
+- name: Disable file:///cdrom repo in sources.list
+  become: true
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: '^(.*file:///cdrom.*)$'
+    replace: '# \1'
 
 - name: Update apt cache
   become: true
