@@ -1,3 +1,9 @@
 # Versions: 1.28 - 1.32.2
 # https://kubernetes.io/releases/
 kube_version: 1.32.2
+
+## HA cluser
+# If you need disable HA, undefine ha_cluster_virtual_ip
+ha_cluster_virtual_ip: 192.168.218.189
+ha_cluster_virtual_port: 7443
+
