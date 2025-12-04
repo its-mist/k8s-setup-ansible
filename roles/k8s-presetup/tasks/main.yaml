@@ -56,11 +56,27 @@
     dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
     mode: '0644'
 
+- name: Detect supported Ubuntu codename for Kubernetes
+  ansible.builtin.set_fact:
+    kubernetes_codename: >-
+      {% if ansible_distribution == 'Ubuntu' %}
+        {% if ansible_distribution_release in ['focal','jammy','lunar'] %}
+          {{ ansible_distribution_release }}
+        {% elif ansible_distribution_release | version_compare('25.04', '>=') %}
+          jammy
+        {% else %}
+          focal
+        {% endif %}
+      {% else %}
+        focal
+      {% endif %}
+
 - name: Add Kubernetes APT repository
   become: true
   ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main"
+    repo: "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-{{ kubernetes_codename }} main"
     state: present
+    filename: kubernetes
 
 - name: Add Kubernetes repo
   become: true
