@@ -49,13 +49,6 @@
   ansible.builtin.command: sysctl --system
 
 # --- Kubernetes APT repo ---
-- name: Disable CD-ROM repo if present
-  become: true
-  ansible.builtin.replace:
-    path: /etc/apt/sources.list
-    regexp: '^deb cdrom:.*$'
-    replace: '# deb cdrom: disabled by ansible'
-
 - name: Remove old kubernetes apt repo if exists
   become: true
   ansible.builtin.file:
@@ -90,10 +83,26 @@
     state: present
 
 
+- name: Disable cdrom repositories
+  become: true
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: '^(deb\s+cdrom:.*)$'
+    replace: '# \1'
+
+- name: Disable cdrom repositories in sources.list.d
+  become: true
+  ansible.builtin.replace:
+    path: "{{ item }}"
+    regexp: '^(deb\s+cdrom:.*)$'
+    replace: '# \1'
+  loop: "{{ lookup('fileglob', '/etc/apt/sources.list.d/*.list', wantlist=True) }}"
+  ignore_errors: true
+
 - name: Update apt cache
   become: true
   ansible.builtin.apt:
-    update_cache: yes
+    update_cache: true
 
 # --- Required packages ---
 - name: Install required packages
