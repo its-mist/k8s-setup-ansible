@@ -43,9 +43,26 @@
   ansible.builtin.template:
     src: haproxy.j2
     dest: /etc/haproxy/haproxy.cfg
-    mode: '0600'
+    mode: '0644'
   register: haproxy_conf
   notify: restart haproxy
+
+- name: Validate HAProxy configuration
+  become: true
+  ansible.builtin.command: haproxy -f /etc/haproxy/haproxy.cfg -c
+  register: haproxy_check
+  changed_when: false
+  failed_when: false
+
+- name: Show HAProxy configuration check result
+  ansible.builtin.debug:
+    msg: "{{ haproxy_check.stderr_lines + haproxy_check.stdout_lines }}"
+  when: haproxy_check.rc != 0
+
+- name: Fail if HAProxy configuration is invalid
+  ansible.builtin.fail:
+    msg: "HAProxy configuration is invalid. Check the output above."
+  when: haproxy_check.rc != 0
 
 - name: Enable keepalived and haproxy
   ansible.builtin.service:

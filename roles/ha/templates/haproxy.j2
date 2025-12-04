@@ -26,7 +26,14 @@ backend app
     balance     roundrobin
 
 {% for server in groups['k8s_master'] %}
-    server {{ hostvars[server]['ansible_facts'].hostname }} {{ hostvars[server]['ansible_facts'].default_ipv4.address }}:6443 check
+{% if hostvars[server] is defined and hostvars[server]['ansible_facts'] is defined %}
+{% set server_facts = hostvars[server]['ansible_facts'] %}
+{% set server_ip = server_facts.get('default_ipv4', {}).get('address', server) %}
+{% set server_name = server_facts.get('hostname', server) %}
+    server {{ server_name }} {{ server_ip }}:6443 check
+{% else %}
+    server {{ server }} {{ server }}:6443 check
+{% endif %}
 {% endfor %}
 
 
