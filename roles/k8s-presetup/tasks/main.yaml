@@ -49,27 +49,41 @@
   ansible.builtin.command: sysctl --system
 
 # --- Kubernetes APT repo ---
-- name: Remove CD-ROM repository to avoid apt errors
+- name: Disable CD-ROM repo if present
   become: true
-  ansible.builtin.lineinfile:
+  ansible.builtin.replace:
     path: /etc/apt/sources.list
-    regexp: '^deb cdrom:'
+    regexp: '^deb cdrom:.*$'
+    replace: '# deb cdrom: disabled by ansible'
+
+- name: Remove old kubernetes apt repo if exists
+  become: true
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/kubernetes.list
     state: absent
 
-- name: Download Kubernetes GPG key
+- name: Create keyrings directory
+  become: true
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download Kubernetes apt key
   become: true
   ansible.builtin.get_url:
-    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-    dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+    url: https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key
+    dest: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
     mode: '0644'
 
-
-- name: Add Kubernetes APT repository
+- name: Add Kubernetes apt repository (pkgs.k8s.io)
   become: true
-  ansible.builtin.apt_repository:
-    repo: "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main"
-    state: present
-    filename: kubernetes
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: |
+      deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /
+    mode: '0644'
+
 
 - name: Update apt cache
   become: true
