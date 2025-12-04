@@ -1,4 +1,5 @@
 - hosts: k8s
   become: true
   roles:
-    - k8s-presetup
+    - ha
+    # - k8s-presetup
