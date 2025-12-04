@@ -1,4 +1,20 @@
 ---
+- name: Disable cdrom repositories in sources.list
+  when: ansible_os_family == "Debian"
+  become: true
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: '^(deb\s+cdrom:.*)$'
+    replace: '# \1'
+
+- name: Disable file:///cdrom repositories in sources.list
+  when: ansible_os_family == "Debian"
+  become: true
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list
+    regexp: '^(.*file:///cdrom.*)$'
+    replace: '# \1'
+
 - name: Set sysctl
   ansible.posix.sysctl:
     name: "net.ipv4.ip_nonlocal_bind"
