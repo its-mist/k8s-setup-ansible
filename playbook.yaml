@@ -1,13 +1,13 @@
 - hosts: k8s
   become: true
   gather_facts: true
-  
+  tags: ha_play
   roles:
     - k8s-presetup
 
 - hosts: k8s_master
   become: true
   gather_facts: true
-  tags: ha_play
+  
   roles:
     - ha
